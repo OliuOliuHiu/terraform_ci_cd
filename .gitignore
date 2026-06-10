@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build and test output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Terraform working files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local lab SSH key pair
+terraform-lab-key
+terraform-lab-key.pub
+terraform/**/terraform-lab-key
+terraform/**/terraform-lab-key.pub
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

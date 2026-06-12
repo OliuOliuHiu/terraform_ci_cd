@@ -1,0 +1,95 @@
+name: CI/CD Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-2
+  TF_WORKING_DIR: terraform
+  IMAGE_NAME: lab-02-tera
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Docker image name
+        id: image
+        run: echo "name=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" \
+            -backend-config="key=lab-02-tera/dev/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ secrets.TF_BACKEND_DYNAMODB_TABLE }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -input=false
+
+      - name: Read EC2 public IP
+        id: tf-output
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: echo "public_ip=$(terraform output -raw ec2_instance_public_ip)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy container to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ steps.tf-output.outputs.public_ip }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            set -eux
+
+            until command -v docker >/dev/null 2>&1 && sudo systemctl is-active --quiet docker; do
+              echo "Waiting for Docker..."
+              sleep 5
+            done
+
+            sudo docker pull "${{ steps.image.outputs.name }}:${{ github.sha }}"
+
+            sudo docker stop lab-02-tera || true
+            sudo docker rm lab-02-tera || true
+
+            sudo docker run -d \
+              --name lab-02-tera \
+              --restart unless-stopped \
+              -p 80:3000 \
+              "${{ steps.image.outputs.name }}:${{ github.sha }}"
+
+            sudo docker image prune -f

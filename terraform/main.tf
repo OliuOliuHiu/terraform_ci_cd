@@ -38,15 +38,15 @@ resource "aws_instance" "lab_instance" {
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   user_data                   = <<-EOF
   #!/bin/bash
-  apt update -y
-  apt install nginx -y
-  systemctl enable nginx
-  systemctl start nginx
-  apt install -y docker.io
+  set -eux
+
+  apt-get update -y
+  apt-get install -y docker.io
   systemctl enable docker
   systemctl start docker
   usermod -aG docker ubuntu
   EOF
+
   tags = {
     Name = "${var.project_name}-${var.environment}-ec2"
   }

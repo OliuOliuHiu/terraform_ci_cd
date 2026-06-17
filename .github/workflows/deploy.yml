@@ -50,16 +50,12 @@ jobs:
 
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" \
-            -backend-config="key=lab-02-tera/dev/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ secrets.TF_BACKEND_DYNAMODB_TABLE }}" \
-            -backend-config="encrypt=true"
+        run: terraform init
 
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_ec2_public_key: ${{ secrets.EC2_SSH_PUBLIC_KEY }}
         run: terraform apply -auto-approve -input=false
 
       - name: Read EC2 public IP

@@ -21,6 +21,12 @@ variable "ssh_allowed_cidr" {
   default     = null
 }
 
+variable "ec2_public_key" {
+  description = "Public SSH key to register as the EC2 key pair."
+  type        = string
+  sensitive   = true
+}
+
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string

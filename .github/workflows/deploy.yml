@@ -97,7 +97,16 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: echo "public_ip=$(terraform output -raw ec2_instance_public_ip)" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy container to EC2
+      - name: Upload deployment files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.tf-output.outputs.public_ip }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: "deploy/deploy.sh,deploy/nginx/default.conf"
+          target: "/home/ubuntu/lab-02-tera"
+
+      - name: Deploy containers to EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ steps.tf-output.outputs.public_ip }}
@@ -105,24 +114,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
             set -eux
-
-            until command -v docker >/dev/null 2>&1 && sudo systemctl is-active --quiet docker; do
-              echo "Waiting for Docker..."
-              sleep 10
-            done
-
-            sudo docker pull "${{ steps.image.outputs.name }}:${{ github.sha }}"
-
-            sudo docker stop lab-02-tera || true
-            sudo docker rm lab-02-tera || true
-
-            sudo docker run -d \
-              --name lab-02-tera \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              "${{ steps.image.outputs.name }}:${{ github.sha }}"
-
-            sudo docker image prune -f
+            sudo sh /home/ubuntu/lab-02-tera/deploy/deploy.sh \
+              "${{ steps.image.outputs.name }}:${{ github.sha }}" \
+              "/home/ubuntu/lab-02-tera/deploy/nginx/default.conf"
 
   destroy:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'

@@ -6,8 +6,14 @@ locals {
     }
 
     http = {
-      port        = 80
+      port        = 3000
       cidr_blocks = ["0.0.0.0/0"]
     }
+
+    http = {
+    port        = 80
+    cidr_blocks = ["0.0.0.0/0"]
+    }
+
   }
 }

@@ -4,7 +4,18 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action to run"
+        required: true
+        default: "deploy"
+        type: choice
+        options:
+          - deploy
+          - destroy
 
 env:
   AWS_REGION: ap-southeast-2
@@ -14,6 +25,7 @@ env:
 
 jobs:
   deploy:
+    if: github.event_name == 'push' || inputs.action == 'deploy'
     runs-on: ubuntu-latest
 
     steps:
@@ -111,3 +123,43 @@ jobs:
               "${{ steps.image.outputs.name }}:${{ github.sha }}"
 
             sudo docker image prune -f
+
+  destroy:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init
+
+      - name: Terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform destroy
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_ec2_public_key: ${{ secrets.EC2_SSH_PUBLIC_KEY }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_ssh_allowed_cidrs: '["0.0.0.0/0"]'
+          TF_VAR_project_name: ${{ env.IMAGE_NAME }}
+        run: terraform destroy -auto-approve -input=false

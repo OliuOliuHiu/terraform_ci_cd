@@ -3,22 +3,9 @@ variable "aws_region" {
   type        = string
 }
 
-variable "aws_profile" {
-  description = "Optional local AWS CLI profile. Leave null in CI so environment credentials are used."
-  type        = string
-  default     = null
-}
-
-variable "my_ip" {
-  description = "Your IP address for SSH access"
-  type        = string
-  default     = null
-}
-
-variable "ssh_allowed_cidr" {
-  description = "CIDR allowed to SSH into the EC2 instance. Use a restricted CIDR for real environments."
-  type        = string
-  default     = null
+variable "ssh_allowed_cidrs" {
+  description = "CIDR blocks allowed to SSH into the EC2 instance."
+  type        = list(string)
 }
 
 variable "ec2_public_key" {

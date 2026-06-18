@@ -10,6 +10,7 @@ env:
   AWS_REGION: ap-southeast-2
   TF_WORKING_DIR: terraform
   IMAGE_NAME: lab-02-tera
+  ENVIRONMENT: dev
 
 jobs:
   deploy:
@@ -45,18 +46,39 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get Github runner public IP
+        id: runner-ip
+        run: echo "cidr=$(curl -fsSL https://checkip.amazonaws.com | tr -d '\n')/32" >> "$GITHUB_OUTPUT"
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
 
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
+      - name: Terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           TF_VAR_ec2_public_key: ${{ secrets.EC2_SSH_PUBLIC_KEY }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_ssh_allowed_cidrs: '["${{ steps.runner-ip.outputs.cidr }}", "${{ secrets.MY_IP }}/32"]'
+          TF_VAR_project_name: ${{ env.IMAGE_NAME }}
         run: terraform apply -auto-approve -input=false
+
+      - name: Terraform output
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform output
+
 
       - name: Read EC2 public IP
         id: tf-output
@@ -74,7 +96,7 @@ jobs:
 
             until command -v docker >/dev/null 2>&1 && sudo systemctl is-active --quiet docker; do
               echo "Waiting for Docker..."
-              sleep 5
+              sleep 10
             done
 
             sudo docker pull "${{ steps.image.outputs.name }}:${{ github.sha }}"
@@ -85,7 +107,7 @@ jobs:
             sudo docker run -d \
               --name lab-02-tera \
               --restart unless-stopped \
-              -p 80:3000 \
+              -p 3000:3000 \
               "${{ steps.image.outputs.name }}:${{ github.sha }}"
 
             sudo docker image prune -f

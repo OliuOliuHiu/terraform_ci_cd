@@ -14,7 +14,7 @@ resource "aws_security_group" "lab_sg" {
 
       protocol = "tcp"
 
-      cidr_blocks = [ingress.value.cidr]
+      cidr_blocks = ingress.value.cidr_blocks
     }
   }
 

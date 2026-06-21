@@ -1,16 +1,11 @@
-output "ec2_instance_public_ip" {
-  description = "Public IP address of the EC2 instance"
-  value       = aws_instance.lab_instance.public_ip
-}
-
 output "ssh_command" {
   description = "SSH command to connect to the EC2 instance"
-  value       = "ssh -i ${aws_key_pair.lab_key.key_name} ubuntu@${aws_instance.lab_instance.public_ip}"
+  value       = "ssh -i ${aws_key_pair.lab_key.key_name} ubuntu@${aws_eip.web_server_eip.public_ip}"
 }
 
 output "web_access_url" {
   description = "URL to access the web server on the EC2 instance"
-  value       = "http://${aws_instance.lab_instance.public_ip}"
+  value       = "http://${aws_eip.web_server_eip.public_ip}"
 }
 
 output "s3_bucket_name" {
@@ -18,7 +13,7 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.lab.bucket
 }
 
-output "eip_public_ip" {
-  description = "Public IP address of the Elastic IP"
+output "ec2_instance_public_ip" {
+  description = "Public IP address of the EC2 instance"
   value       = aws_eip.web_server_eip.public_ip
 }

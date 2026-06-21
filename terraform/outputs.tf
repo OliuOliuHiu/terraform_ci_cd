@@ -17,3 +17,8 @@ output "s3_bucket_name" {
   description = "Name of the S3 bucket created"
   value       = aws_s3_bucket.lab.bucket
 }
+
+output "eip_public_ip" {
+  description = "Public IP address of the Elastic IP"
+  value       = aws_eip.web_server_eip.public_ip
+}

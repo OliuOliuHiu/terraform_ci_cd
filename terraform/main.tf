@@ -46,8 +46,21 @@ resource "aws_instance" "lab_instance" {
   systemctl start docker
   usermod -aG docker ubuntu
   EOF
-
+  root_block_device {
+    volume_size = 12
+    volume_type = "gp3"
+    delete_on_termination = true
+  }
   tags = {
     Name = "${var.project_name}-${var.environment}-ec2"
   }
+}
+
+resource "aws_eip" "web_server_eip" {
+  domain = "vpc"
+}
+
+resource "aws_eip_association" "web_server_eip_assoc" {
+  instance_id   = aws_instance.lab_instance.id
+  allocation_id = aws_eip.web_server_eip.id
 }

@@ -30,13 +30,13 @@ resource "aws_key_pair" "lab_key" {
 }
 
 resource "aws_instance" "lab_instance" {
-  ami                         = data.aws_ami.ubuntu.id
-  instance_type               = "t2.micro"
-  key_name                    = aws_key_pair.lab_key.key_name
-  security_groups             = [aws_security_group.lab_sg.name]
-  associate_public_ip_address = true
-  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
-  user_data                   = <<-EOF
+  ami             = data.aws_ami.ubuntu.id
+  instance_type   = "t2.micro"
+  key_name        = aws_key_pair.lab_key.key_name
+  security_groups = [aws_security_group.lab_sg.name]
+  # associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+  user_data            = <<-EOF
   #!/bin/bash
   set -eux
 
@@ -46,9 +46,10 @@ resource "aws_instance" "lab_instance" {
   systemctl start docker
   usermod -aG docker ubuntu
   EOF
+
   root_block_device {
-    volume_size = 12
-    volume_type = "gp3"
+    volume_size           = 12
+    volume_type           = "gp3"
     delete_on_termination = true
   }
   tags = {

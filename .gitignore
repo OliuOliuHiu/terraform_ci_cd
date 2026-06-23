@@ -44,3 +44,4 @@ terraform/**/terraform-lab-key.pub
 Thumbs.db
 .idea/
 .vscode/
+inventory.ini

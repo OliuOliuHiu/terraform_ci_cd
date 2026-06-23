@@ -36,16 +36,16 @@ resource "aws_instance" "lab_instance" {
   security_groups = [aws_security_group.lab_sg.name]
   # associate_public_ip_address = true
   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-  user_data            = <<-EOF
-  #!/bin/bash
-  set -eux
+  # user_data            = <<-EOF
+  # #!/bin/bash
+  # set -eux
 
-  apt-get update -y
-  apt-get install -y docker.io
-  systemctl enable docker
-  systemctl start docker
-  usermod -aG docker ubuntu
-  EOF
+  # apt-get update -y
+  # apt-get install -y docker.io
+  # systemctl enable docker
+  # systemctl start docker
+  # usermod -aG docker ubuntu
+  # EOF
 
   root_block_device {
     volume_size           = 12

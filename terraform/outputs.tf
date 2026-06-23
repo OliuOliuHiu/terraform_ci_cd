@@ -17,3 +17,8 @@ output "ec2_instance_public_ip" {
   description = "Public IP address of the EC2 instance"
   value       = aws_eip.web_server_eip.public_ip
 }
+
+output "ec2_instance_id" {
+  description = "EC2 instance ID"
+  value       = aws_instance.lab_instance.id
+}

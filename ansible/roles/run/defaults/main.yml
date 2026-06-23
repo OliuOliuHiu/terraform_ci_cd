@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/run
+dockerhub_username: "{{ lookup('env', 'DOCKERHUB_USERNAME') | default('', true) }}"
+dockerhub_token: "{{ lookup('env', 'DOCKERHUB_TOKEN') | default('', true) }}"
+
+app_image_name: "{{ (dockerhub_username ~ '/') if dockerhub_username | length > 0 else '' }}lab-02-tera"
+app_image_tag: latest
+app_image: "{{ lookup('env', 'APP_IMAGE') | default(app_image_name ~ ':' ~ app_image_tag, true) }}"
+nginx_image: nginx:1.27-alpine
+
+app_container_name: tera-app
+nginx_container_name: tera-nginx
+docker_network_name: tera-net
+
+deploy_dir: /home/ubuntu/lab-02-tera
+nginx_conf_dest: "{{ deploy_dir }}/nginx.conf"
+nginx_conf_container_path: /etc/nginx/conf.d/default.conf
+app_port: 3000

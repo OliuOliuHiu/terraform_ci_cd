@@ -1,0 +1,93 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/run
+- name: Ensure deploy directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render nginx config
+  ansible.builtin.template:
+    src: default.conf.j2
+    dest: "{{ nginx_conf_dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Check Docker network
+  ansible.builtin.command: docker network inspect "{{ docker_network_name }}"
+  register: docker_network_check
+  changed_when: false
+  failed_when: false
+
+- name: Create Docker network
+  ansible.builtin.command: docker network create "{{ docker_network_name }}"
+  when: docker_network_check.rc != 0
+
+- name: Login to Docker Hub
+  ansible.builtin.command: docker login --username "{{ dockerhub_username }}" --password-stdin
+  args:
+    stdin: "{{ dockerhub_token }}"
+  register: dockerhub_login
+  changed_when: "'Login Succeeded' in dockerhub_login.stdout"
+  no_log: true
+  when:
+    - dockerhub_username | length > 0
+    - dockerhub_token | length > 0
+
+- name: Pull application image
+  ansible.builtin.command: docker pull "{{ app_image }}"
+  register: app_image_pull
+  changed_when: "'Downloaded newer image' in app_image_pull.stdout or 'Pull complete' in app_image_pull.stdout"
+
+- name: Pull nginx image
+  ansible.builtin.command: docker pull "{{ nginx_image }}"
+  register: nginx_image_pull
+  changed_when: "'Downloaded newer image' in nginx_image_pull.stdout or 'Pull complete' in nginx_image_pull.stdout"
+
+- name: Remove old nginx container
+  ansible.builtin.command: docker rm -f "{{ nginx_container_name }}"
+  register: nginx_container_remove
+  failed_when: false
+  changed_when: nginx_container_remove.rc == 0
+
+- name: Remove old application container
+  ansible.builtin.command: docker rm -f "{{ app_container_name }}"
+  register: app_container_remove
+  failed_when: false
+  changed_when: app_container_remove.rc == 0
+
+- name: Create application container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ app_container_name }}"
+      - --network
+      - "{{ docker_network_name }}"
+      - --restart
+      - unless-stopped
+      - "{{ app_image }}"
+
+- name: Create nginx container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ nginx_container_name }}"
+      - --network
+      - "{{ docker_network_name }}"
+      - --restart
+      - unless-stopped
+      - -p
+      - 80:80
+      - -v
+      - "{{ nginx_conf_dest }}:{{ nginx_conf_container_path }}:ro"
+      - "{{ nginx_image }}"

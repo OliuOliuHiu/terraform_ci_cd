@@ -1,0 +1,8 @@
+---
+- name: Deploy lab-02-tera
+  hosts: webservers
+  become: true
+
+  roles:
+    - docker
+    - run

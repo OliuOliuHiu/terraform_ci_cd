@@ -60,9 +60,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # - name: Get Github runner public IP
-      #   id: runner-ip
-      #   run: echo "cidr=$(curl -fsSL https://checkip.amazonaws.com | tr -d '\n')/32" >> "$GITHUB_OUTPUT"
+      - name: Get Github runner public IP
+        id: runner-ip
+        run: echo "cidr=$(curl -fsSL https://checkip.amazonaws.com | tr -d '\n')/32" >> "$GITHUB_OUTPUT"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -85,7 +85,7 @@ jobs:
           TF_VAR_ec2_public_key: ${{ secrets.EC2_SSH_PUBLIC_KEY }}
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_ssh_allowed_cidrs: '["${{ secrets.MY_IP }}/32"]'
+          TF_VAR_ssh_allowed_cidrs: '["${{ steps.runner-ip.outputs.cidr }}","${{ secrets.MY_IP }}/32"]'
           TF_VAR_project_name: ${{ env.IMAGE_NAME }}
         run: terraform apply -auto-approve -input=false
 

@@ -9,5 +9,10 @@ locals {
       port        = 80
       cidr_blocks = ["0.0.0.0/0"]
     }
+
+    https = {
+      port        = 443
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 }

@@ -9,6 +9,38 @@
     group: root
     mode: "0755"
 
+- name: Validate TLS secrets
+  ansible.builtin.assert:
+    that:
+      - tls_cert_b64 | length > 0
+      - tls_key_b64 | length > 0
+    fail_msg: "TLS_CERT_B64 and TLS_KEY_B64 are required"
+
+- name: Ensure TLS directory exists
+  ansible.builtin.file:
+    path: "{{ tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Copy TLS certificate
+  ansible.builtin.copy:
+    content: "{{ tls_cert_b64 | b64decode }}"
+    dest: "{{ tls_dir }}/fullchain.pem"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy TLS private key
+  ansible.builtin.copy:
+    content: "{{ tls_key_b64 | b64decode }}"
+    dest: "{{ tls_dir }}/privkey.pem"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
 - name: Render nginx config
   ansible.builtin.template:
     src: default.conf.j2
@@ -88,6 +120,10 @@
       - unless-stopped
       - -p
       - 80:80
+      - -p
+      - 443:443
       - -v
       - "{{ nginx_conf_dest }}:{{ nginx_conf_container_path }}:ro"
+      - -v
+      - "{{ tls_dir }}:/etc/tls:ro"
       - "{{ nginx_image }}"

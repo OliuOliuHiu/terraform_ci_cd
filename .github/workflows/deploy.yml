@@ -108,7 +108,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key
           chmod 600 ~/.ssh/ec2_key
-      
+
       - name: Add EC2 host key to known_hosts
         run: |
           ssh-keyscan -H ${{ steps.tf-output.outputs.public_ip }} >> ~/.ssh/known_hosts
@@ -123,6 +123,8 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          TLS_CERT_B64: ${{ secrets.TLS_CERT_B64 }}
+          TLS_KEY_B64: ${{ secrets.TLS_KEY_B64 }}
         run: |
           ansible-playbook -i ansible/inventory.ci.ini ansible/deploy.yml
 

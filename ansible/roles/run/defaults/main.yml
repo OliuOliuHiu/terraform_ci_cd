@@ -16,4 +16,7 @@ docker_network_name: tera-net
 deploy_dir: /home/ubuntu/lab-02-tera
 nginx_conf_dest: "{{ deploy_dir }}/nginx.conf"
 nginx_conf_container_path: /etc/nginx/conf.d/default.conf
+tls_cert_b64: "{{ lookup('env', 'TLS_CERT_B64') | default('', true) }}"
+tls_key_b64: "{{ lookup('env', 'TLS_KEY_B64') | default('', true) }}"
+tls_dir: /etc/tls
 app_port: 3000

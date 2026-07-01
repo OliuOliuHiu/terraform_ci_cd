@@ -23,3 +23,15 @@ variable "environment" {
   description = "Deployment environment (e.g., dev, staging, prod)"
   type        = string
 }
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/24"
+}
+
+variable "az_count" {
+  description = "Number of availability zones (and public/private subnet pairs) to create"
+  type        = number
+  default     = 2
+}

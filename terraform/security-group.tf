@@ -60,12 +60,16 @@ resource "aws_security_group" "app_sg" {
   description = "Security group for Terraform app"
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    description     = "Allow traffic from web server SG"
-    from_port       = local.app_port
-    to_port         = local.app_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_server_sg.id]
+  dynamic "ingress" {
+    for_each = local.app_ingress_ports
+
+    content {
+      description = "Allow traffic from web server SG"
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      security_groups = [aws_security_group.web_server_sg.id]
+    }
   }
   ingress {
     description     = "Allow traffic from bastion SG"

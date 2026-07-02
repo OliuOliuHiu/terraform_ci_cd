@@ -1,0 +1,21 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/nginx
+nginx_image: nginx:1.27-alpine
+nginx_container_name: nginx
+
+nginx_conf_dir: /home/ubuntu/nginx
+nginx_conf_dest: "{{ nginx_conf_dir }}/default.conf"
+nginx_conf_container_path: /etc/nginx/conf.d/default.conf
+
+# Backend app server (private IP lấy tự động từ inventory group 'app')
+app_host: "{{ hostvars[groups['app'][0]].ansible_host }}"
+jenkins_upstream_port: 8080
+gitlab_upstream_port: 8929
+
+# TLS - cert/key truyền qua biến môi trường dạng base64 (giống lab cũ):
+#   export TLS_CERT_B64="$(base64 -w0 fullchain.pem)"
+#   export TLS_KEY_B64="$(base64 -w0 privkey.pem)"
+tls_cert_b64: "{{ lookup('env', 'TLS_CERT_B64') | default('', true) }}"
+tls_key_b64: "{{ lookup('env', 'TLS_KEY_B64') | default('', true) }}"
+tls_dir: /etc/tls

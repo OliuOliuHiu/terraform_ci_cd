@@ -1,0 +1,61 @@
+# Ánh xạ header Upgrade -> Connection, phục vụ WebSocket (agent Jenkins).
+# 'map' phải ở tầng http; file conf.d được include sẵn trong http {} nên đặt đây hợp lệ.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# HTTP -> ép sang HTTPS
+server {
+    listen 80;
+    server_name _;
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/tls/fullchain.pem;
+    ssl_certificate_key /etc/tls/privkey.pem;
+
+    # Jenkins (chạy trên app_runtime với --prefix=/jenkins)
+    location = /jenkins {
+        return 301 /jenkins/;
+    }
+    location /jenkins/ {
+        proxy_pass http://{{ app_host }}:{{ jenkins_upstream_port }};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket: cho agent Jenkins kết nối ngược qua proxy (không cần port 50000)
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+    }
+
+    # GitLab (chạy trên app_runtime với external_url .../gitlab)
+    location = /gitlab {
+        return 301 /gitlab/;
+    }
+    location /gitlab/ {
+        proxy_pass http://{{ app_host }}:{{ gitlab_upstream_port }};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        client_max_body_size 512m;
+    }
+
+    location / {
+        default_type text/plain;
+        return 200 "lab-02 reverse proxy\navailable: /jenkins/  /gitlab/\n";
+    }
+}

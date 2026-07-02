@@ -10,5 +10,5 @@ locals {
       cidr_blocks = ["0.0.0.0/0"]
     }
   }
-  app_port = 8080
+  app_ingress_ports = [8080, 8929]
 }

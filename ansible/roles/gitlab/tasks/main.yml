@@ -1,0 +1,59 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/gitlab
+- name: Validate web_public_ip is set
+  ansible.builtin.assert:
+    that:
+      - web_public_ip is defined
+      - web_public_ip | length > 0
+      - web_public_ip != "CHANGE_ME"
+    fail_msg: "web_public_ip chưa được đặt. Truyền: -e web_public_ip=<WEB_EIP> (terraform output web_public_ip)"
+
+- name: Ensure GitLab directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ gitlab_config_dir }}"
+    - "{{ gitlab_logs_dir }}"
+    - "{{ gitlab_data_dir }}"
+
+- name: Pull GitLab image
+  ansible.builtin.command: docker pull "{{ gitlab_image }}"
+  register: gitlab_image_pull
+  changed_when: "'Downloaded newer image' in gitlab_image_pull.stdout or 'Pull complete' in gitlab_image_pull.stdout"
+
+- name: Remove old GitLab container
+  ansible.builtin.command: docker rm -f "{{ gitlab_container_name }}"
+  register: gitlab_container_remove
+  failed_when: false
+  changed_when: gitlab_container_remove.rc == 0
+
+- name: Run GitLab container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ gitlab_container_name }}"
+      - --hostname
+      - "{{ web_public_ip }}"
+      - --restart
+      - unless-stopped
+      - -e
+      - "GITLAB_OMNIBUS_CONFIG={{ gitlab_omnibus_config }}"
+      - -p
+      - "{{ gitlab_http_port }}:80"
+      - -v
+      - "{{ gitlab_config_dir }}:/etc/gitlab"
+      - -v
+      - "{{ gitlab_logs_dir }}:/var/log/gitlab"
+      - -v
+      - "{{ gitlab_data_dir }}:/var/opt/gitlab"
+      - --shm-size
+      - 256m
+      - "{{ gitlab_image }}"

@@ -1,8 +1,19 @@
 ---
-- name: Deploy lab-02-tera
-  hosts: webservers
+- name: Install Docker on all servers
+  hosts: all
   become: true
-
   roles:
     - docker
-    - run
+
+- name: Configure nginx reverse proxy
+  hosts: web
+  become: true
+  roles:
+    - nginx
+
+- name: Configure app services (Jenkins + GitLab)
+  hosts: app
+  become: true
+  roles:
+    - jenkins
+    # - gitlab

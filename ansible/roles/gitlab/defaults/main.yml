@@ -1,0 +1,33 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/gitlab
+# Pin version CỤ THỂ - không dùng ':latest'.
+# Xác nhận tag trên Docker Hub, hoặc pin theo digest để bất biến.
+gitlab_version: "17.11.4-ce.0"
+gitlab_image: "gitlab/gitlab-ce:{{ gitlab_version }}"
+gitlab_container_name: gitlab
+
+# port publish trên app_runtime (web nginx proxy /gitlab/ sang đây)
+gitlab_http_port: 8929
+
+# thư mục bind-mount để giữ config/log/data qua các lần deploy
+gitlab_config_dir: /srv/gitlab/config
+gitlab_logs_dir: /srv/gitlab/logs
+gitlab_data_dir: /srv/gitlab/data
+
+# ---------------------------------------------------------------------------
+# QUAN TRỌNG: đặt = public IP (EIP) của web_server -> `terraform output web_public_ip`
+# GitLab dùng nó để sinh link (clone URL, redirect...). Truyền lúc chạy:
+#   ansible-playbook ... -e web_public_ip=<WEB_EIP>
+# ---------------------------------------------------------------------------
+web_public_ip: "CHANGE_ME"
+
+gitlab_external_url: "https://{{ web_public_ip }}/gitlab"
+
+# external_url là HTTPS (TLS kết thúc ở nginx web) nhưng nginx NỘI BỘ của GitLab
+# vẫn nghe HTTP cổng 80 (map ra {{ gitlab_http_port }}). listen_https=false +
+# listen_port=80 để GitLab biết TLS do proxy phía trước xử lý, tránh redirect loop.
+gitlab_omnibus_config: >-
+  external_url '{{ gitlab_external_url }}';
+  nginx['listen_port'] = 80;
+  nginx['listen_https'] = false;

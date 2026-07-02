@@ -1,0 +1,81 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/nginx
+- name: Ensure nginx config directory exists
+  ansible.builtin.file:
+    path: "{{ nginx_conf_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Validate TLS secrets
+  ansible.builtin.assert:
+    that:
+      - tls_cert_b64 | length > 0
+      - tls_key_b64 | length > 0
+    fail_msg: "TLS_CERT_B64 và TLS_KEY_B64 là bắt buộc. Export chúng trước khi chạy."
+
+- name: Ensure TLS directory exists
+  ansible.builtin.file:
+    path: "{{ tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Copy TLS certificate
+  ansible.builtin.copy:
+    content: "{{ tls_cert_b64 | b64decode }}"
+    dest: "{{ tls_dir }}/fullchain.pem"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy TLS private key
+  ansible.builtin.copy:
+    content: "{{ tls_key_b64 | b64decode }}"
+    dest: "{{ tls_dir }}/privkey.pem"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Render nginx reverse proxy config
+  ansible.builtin.template:
+    src: default.conf.j2
+    dest: "{{ nginx_conf_dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Pull nginx image
+  ansible.builtin.command: docker pull "{{ nginx_image }}"
+  register: nginx_image_pull
+  changed_when: "'Downloaded newer image' in nginx_image_pull.stdout or 'Pull complete' in nginx_image_pull.stdout"
+
+- name: Remove old nginx container
+  ansible.builtin.command: docker rm -f "{{ nginx_container_name }}"
+  register: nginx_container_remove
+  failed_when: false
+  changed_when: nginx_container_remove.rc == 0
+
+- name: Run nginx container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ nginx_container_name }}"
+      - --restart
+      - unless-stopped
+      - -p
+      - 80:80
+      - -p
+      - 443:443
+      - -v
+      - "{{ nginx_conf_dest }}:{{ nginx_conf_container_path }}:ro"
+      - -v
+      - "{{ tls_dir }}:/etc/tls:ro"
+      - "{{ nginx_image }}"

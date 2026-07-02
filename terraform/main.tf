@@ -48,7 +48,7 @@ resource "aws_instance" "web" {
   vpc_security_group_ids = [aws_security_group.web_server_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   root_block_device {
-    volume_size           = 12
+    volume_size           = 8
     volume_type           = "gp3"
     delete_on_termination = true
   }
@@ -59,13 +59,13 @@ resource "aws_instance" "web" {
 
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t2.micro"
+  instance_type          = "t3.micro"
   key_name               = aws_key_pair.lab_key.key_name
   subnet_id              = aws_subnet.private[local.azs[0]].id
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   root_block_device {
-    volume_size           = 12
+    volume_size           = 20
     volume_type           = "gp3"
     delete_on_termination = true
   }

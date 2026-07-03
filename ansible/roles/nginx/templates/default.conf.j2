@@ -54,8 +54,39 @@ server {
         client_max_body_size 512m;
     }
 
+    # Prometheus (chạy trên monitoring với --web.route-prefix=/prometheus)
+    # proxy_pass KHÔNG có '/' cuối -> giữ nguyên path /prometheus/... để khớp route-prefix.
+    location = /prometheus {
+        return 301 /prometheus/;
+    }
+    location /prometheus/ {
+        proxy_pass http://{{ monitoring_host }}:{{ prometheus_upstream_port }};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Grafana (chạy trên monitoring với GF_SERVER_SERVE_FROM_SUB_PATH=true)
+    # proxy_pass KHÔNG có '/' cuối -> giữ nguyên path /grafana/... để Grafana tự xử.
+    location /grafana/ {
+        proxy_pass http://{{ monitoring_host }}:{{ grafana_upstream_port }};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Grafana Live dùng WebSocket -> cần nâng cấp kết nối
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+    }
+
     location / {
         default_type text/plain;
-        return 200 "lab-02 reverse proxy\navailable: /jenkins/  /gitlab/\n";
+        return 200 "lab-02 reverse proxy\navailable: /jenkins/  /gitlab/  /prometheus/  /grafana/\n";
     }
 }

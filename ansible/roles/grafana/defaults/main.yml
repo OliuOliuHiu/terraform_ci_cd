@@ -1,0 +1,28 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/grafana
+# Pin version cụ thể — không dùng ':latest' trôi nổi.
+grafana_version: "11.3.0"
+grafana_image: "grafana/grafana:{{ grafana_version }}"
+grafana_container_name: grafana
+
+# Grafana là app phục vụ UI -> chạy bridge, publish 3000 ra host.
+grafana_http_port: 3000
+
+# Volume lưu dashboards/users/settings (giữ qua các lần deploy).
+grafana_data_volume: grafana_data
+
+# --- Phục vụ dưới sub-path /grafana/ qua nginx reverse proxy ---
+# root_url = external-url (địa chỉ công khai Grafana tự xưng).
+# monitoring_public_host lấy từ group_vars/monitoring.yml.
+grafana_root_url: "https://{{ monitoring_public_host }}/grafana/"
+
+# Tài khoản admin khởi tạo (đổi mật khẩu ngay sau lần đăng nhập đầu).
+grafana_admin_user: admin
+grafana_admin_password: admin
+
+# --- Provisioning: tự tạo sẵn data source trỏ về Prometheus ---
+grafana_conf_dir: /home/ubuntu/grafana
+# Prometheus chạy CÙNG host monitoring, publish cổng 9090, route-prefix /prometheus
+# -> URL nội bộ phải kèm /prometheus. ansible_host = IP private con monitoring.
+grafana_datasource_prometheus_url: "http://{{ ansible_host }}:9090/prometheus"

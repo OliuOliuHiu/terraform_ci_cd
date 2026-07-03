@@ -1,0 +1,64 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/prometheus
+- name: Validate monitoring_public_host
+  ansible.builtin.assert:
+    that:
+      - monitoring_public_host | length > 0
+    fail_msg: >-
+      monitoring_public_host is blank. Please provide a valid value for ex:
+      -e "monitoring_public_host=$(cd terraform && terraform output -raw web_public_ip)"
+
+- name: Ensure Prometheus config directory exists
+  ansible.builtin.file:
+    path: "{{ prometheus_conf_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: "0755"
+
+- name: Render prometheus.yml
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_conf_file }}"
+    owner: ubuntu
+    group: ubuntu
+    mode: "0644"
+
+- name: Pull Prometheus image
+  ansible.builtin.command: docker pull "{{ prometheus_image }}"
+  register: prometheus_image_pull
+  changed_when: "'Downloaded newer image' in prometheus_image_pull.stdout or 'Pull complete' in prometheus_image_pull.stdout"
+
+- name: Ensure Prometheus data volume exists
+  ansible.builtin.command: docker volume create "{{ prometheus_data_volume }}"
+  register: prometheus_volume
+  changed_when: "prometheus_data_volume in prometheus_volume.stdout"
+
+- name: Remove old Prometheus container
+  ansible.builtin.command: docker rm -f "{{ prometheus_container_name }}"
+  register: prometheus_container_remove
+  failed_when: false
+  changed_when: prometheus_container_remove.rc == 0
+
+- name: Run Prometheus container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ prometheus_container_name }}"
+      - --restart
+      - unless-stopped
+      - -p
+      - "{{ prometheus_http_port }}:9090"
+      - -v
+      - "{{ prometheus_conf_file }}:{{ prometheus_conf_container_path }}:ro"
+      - -v
+      - "{{ prometheus_data_volume }}:/prometheus"
+      - "{{ prometheus_image }}"
+      - "--config.file={{ prometheus_conf_container_path }}"
+      - --storage.tsdb.path=/prometheus
+      - "--web.external-url={{ prometheus_external_url }}"
+      - "--web.route-prefix={{ prometheus_route_prefix }}"

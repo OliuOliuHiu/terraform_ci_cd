@@ -6,6 +6,11 @@ output "bastion_ssh_command" {
   value       = "ssh -i ${aws_key_pair.lab_key.key_name} ubuntu@${aws_eip.bastion_eip.public_ip}"
 }
 
+output "monitoring_ssh_command" {
+  description = "SSH command to connect to the monitoring server (via bastion)"
+  value       = "ssh -i ${aws_key_pair.lab_key.key_name} -o ProxyJump=ubuntu@${aws_eip.bastion_eip.public_ip} ubuntu@${aws_instance.monitoring.private_ip}"
+}
+
 output "web_ssh_command" {
   description = "SSH command to connect to the web server (via bastion)"
   value       = "ssh -i ${aws_key_pair.lab_key.key_name} -o ProxyJump=ubuntu@${aws_eip.bastion_eip.public_ip} ubuntu@${aws_instance.web.private_ip}"
@@ -39,12 +44,18 @@ output "app_private_ip" {
   value       = aws_instance.app.private_ip
 }
 
+output "monitoring_private_ip" {
+  description = "Private IP of the monitoring server (reachable via the bastion)"
+  value       = aws_instance.monitoring.private_ip
+}
+
 output "instance_ids" {
   description = "IDs of all EC2 instances"
   value = {
-    bastion = aws_instance.bastion.id
-    web     = aws_instance.web.id
-    app     = aws_instance.app.id
+    bastion    = aws_instance.bastion.id
+    web        = aws_instance.web.id
+    app        = aws_instance.app.id
+    monitoring = aws_instance.monitoring.id
   }
 }
 

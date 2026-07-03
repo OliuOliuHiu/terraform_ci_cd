@@ -1,0 +1,67 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/grafana
+- name: Validate monitoring_public_host
+  ansible.builtin.assert:
+    that:
+      - monitoring_public_host | length > 0
+    fail_msg: >-
+      monitoring_public_host trống. Điền web EIP trong ansible/group_vars/monitoring.yml
+
+- name: Ensure Grafana provisioning directory exists
+  ansible.builtin.file:
+    path: "{{ grafana_conf_dir }}/provisioning/datasources"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: "0755"
+
+- name: Render Grafana Prometheus datasource
+  ansible.builtin.template:
+    src: datasource.yml.j2
+    dest: "{{ grafana_conf_dir }}/provisioning/datasources/prometheus.yml"
+    owner: ubuntu
+    group: ubuntu
+    mode: "0644"
+
+- name: Pull Grafana image
+  ansible.builtin.command: docker pull "{{ grafana_image }}"
+  register: grafana_image_pull
+  changed_when: "'Downloaded newer image' in grafana_image_pull.stdout or 'Pull complete' in grafana_image_pull.stdout"
+
+- name: Ensure Grafana data volume exists
+  ansible.builtin.command: docker volume create "{{ grafana_data_volume }}"
+  register: grafana_volume
+  changed_when: "grafana_data_volume in grafana_volume.stdout"
+
+- name: Remove old Grafana container
+  ansible.builtin.command: docker rm -f "{{ grafana_container_name }}"
+  register: grafana_container_remove
+  failed_when: false
+  changed_when: grafana_container_remove.rc == 0
+
+- name: Run Grafana container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ grafana_container_name }}"
+      - --restart
+      - unless-stopped
+      - -p
+      - "{{ grafana_http_port }}:3000"
+      - -e
+      - "GF_SERVER_ROOT_URL={{ grafana_root_url }}"
+      - -e
+      - "GF_SERVER_SERVE_FROM_SUB_PATH=true"
+      - -e
+      - "GF_SECURITY_ADMIN_USER={{ grafana_admin_user }}"
+      - -e
+      - "GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}"
+      - -v
+      - "{{ grafana_conf_dir }}/provisioning:/etc/grafana/provisioning:ro"
+      - -v
+      - "{{ grafana_data_volume }}:/var/lib/grafana"
+      - "{{ grafana_image }}"

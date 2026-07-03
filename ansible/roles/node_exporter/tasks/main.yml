@@ -1,0 +1,36 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/node_exporter
+- name: Pull node_exporter image
+  ansible.builtin.command: docker pull "{{ node_exporter_image }}"
+  register: node_exporter_image_pull
+  changed_when: "'Downloaded newer image' in node_exporter_image_pull.stdout or 'Pull complete' in node_exporter_image_pull.stdout"
+
+- name: Remove old node_exporter container
+  ansible.builtin.command: docker rm -f "{{ node_exporter_container_name }}"
+  register: node_exporter_container_remove
+  failed_when: false
+  changed_when: node_exporter_container_remove.rc == 0
+
+# --net=host + --pid=host + rootfs mount = cách chạy chuẩn của node_exporter:
+#  - --net=host: listen thẳng cổng 9100 trên host, và đọc đúng metrics network của host
+#  - --pid=host: nhìn thấy toàn bộ process của host
+#  - -v /:/host:ro,rslave + --path.rootfs=/host: đọc metrics disk/filesystem thật của host
+- name: Run node_exporter container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ node_exporter_container_name }}"
+      - --restart
+      - unless-stopped
+      - --net
+      - host
+      - --pid
+      - host
+      - -v
+      - "/:/host:ro,rslave"
+      - "{{ node_exporter_image }}"
+      - --path.rootfs=/host

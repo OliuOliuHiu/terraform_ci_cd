@@ -13,6 +13,11 @@ app_host: "{{ hostvars[groups['app'][0]].ansible_host }}"
 jenkins_upstream_port: 8080
 gitlab_upstream_port: 8929
 
+# Backend monitoring server (private IP lấy tự động từ inventory group 'monitoring')
+monitoring_host: "{{ hostvars[groups['monitoring'][0]].ansible_host }}"
+prometheus_upstream_port: 9090
+grafana_upstream_port: 3000
+
 # TLS - cert/key truyền qua biến môi trường dạng base64 (giống lab cũ):
 #   export TLS_CERT_B64="$(base64 -w0 fullchain.pem)"
 #   export TLS_KEY_B64="$(base64 -w0 privkey.pem)"

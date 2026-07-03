@@ -1,0 +1,30 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/prometheus
+# Pin version cụ thể (LTS) — không dùng ':latest' trôi nổi.
+prometheus_version: "v2.55.1"
+prometheus_image: "prom/prometheus:{{ prometheus_version }}"
+prometheus_container_name: prometheus
+
+# Prometheus là app phục vụ UI -> chạy bridge, publish cổng 9090 ra host.
+prometheus_http_port: 9090
+
+# Volume lưu TSDB (số liệu lịch sử, giữ qua các lần deploy).
+prometheus_data_volume: prometheus_data
+
+# File config: template ra host rồi mount vào container.
+prometheus_conf_dir: /home/ubuntu/prometheus
+prometheus_conf_file: "{{ prometheus_conf_dir }}/prometheus.yml"
+prometheus_conf_container_path: /etc/prometheus/prometheus.yml
+
+# --- Cấu hình phục vụ qua nginx reverse proxy dưới sub-path /prometheus/ ---
+prometheus_route_prefix: /prometheus
+# Host công khai (web EIP) giờ khai MỘT chỗ duy nhất ở ansible/group_vars/monitoring.yml
+# (dùng chung cho cả Grafana). Để "" ở đây làm fallback; group_vars sẽ override.
+monitoring_public_host: ""
+prometheus_external_url: "https://{{ monitoring_public_host }}{{ prometheus_route_prefix }}/"
+
+# --- Scrape targets ---
+# Cổng node_exporter (khớp role node_exporter ở Bước 2).
+node_exporter_port: 9100
+prometheus_scrape_interval: 15s

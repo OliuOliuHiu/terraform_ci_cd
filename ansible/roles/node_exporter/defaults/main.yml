@@ -1,0 +1,10 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/node_exporter
+# Pin version cụ thể — không dùng ':latest' trôi nổi.
+node_exporter_version: "v1.8.2"
+node_exporter_image: "prom/node-exporter:{{ node_exporter_version }}"
+node_exporter_container_name: node_exporter
+
+# Cổng expose metrics trên host (SG cho phép monitoring SG tới cổng này).
+node_exporter_port: 9100

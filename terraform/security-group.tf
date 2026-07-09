@@ -78,6 +78,7 @@ resource "aws_security_group" "app_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_sg.id]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -119,6 +120,65 @@ resource "aws_security_group" "monitoring_sg" {
   }
 }
 
+resource "aws_security_group" "repo_server_sg" {
+  name        = "repo-server-sg"
+  description = "Security group for Terraform repo server"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Allow traffic from bastion SG"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  dynamic "ingress" {
+    for_each = local.repo_server_ingress_ports
+
+    content {
+      description     = "Allow traffic from web server SG"
+      from_port       = ingress.value
+      to_port         = ingress.value
+      protocol        = "tcp"
+      security_groups = [aws_security_group.web_server_sg.id]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = local.repo_server_ci_ports
+
+    content {
+      description     = "Allow traffic from app SG"
+      from_port       = ingress.value
+      to_port         = ingress.value
+      protocol        = "tcp"
+      security_groups = [aws_security_group.app_sg.id]
+    }
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# ---------------------------------------------------------------------------
+# GitLab webhook: repo-server (GitLab) gọi ngược Jenkins trên app cổng 8080.
+# Tách ra standalone để tránh dependency cycle app_sg <-> repo_server_sg
+# (repo_server_sg đã tham chiếu app_sg inline ở block dynamic CI ports).
+# ---------------------------------------------------------------------------
+resource "aws_vpc_security_group_ingress_rule" "app_jenkins_from_repo_server" {
+  security_group_id            = aws_security_group.app_sg.id
+  referenced_security_group_id = aws_security_group.repo_server_sg.id
+  description                  = "GitLab webhook -> Jenkins on app"
+  from_port                    = 8080
+  to_port                      = 8080
+  ip_protocol                  = "tcp"
+}
+
 # ---------------------------------------------------------------------------
 # Chiều B (SCRAPE): Prometheus (monitoring SG) hút node_exporter cổng 9100
 # trên web & app. Khai báo tách rời để tránh dependency cycle web<->monitoring
@@ -139,5 +199,24 @@ resource "aws_vpc_security_group_ingress_rule" "app_node_exporter_from_monitorin
   description                  = "node_exporter scrape from Prometheus"
   from_port                    = 9100
   to_port                      = 9100
+  ip_protocol                  = "tcp"
+}
+
+# cAdvisor (metrics container) cổng 8081 — Prometheus scrape trên web & app.
+resource "aws_vpc_security_group_ingress_rule" "web_cadvisor_from_monitoring" {
+  security_group_id            = aws_security_group.web_server_sg.id
+  referenced_security_group_id = aws_security_group.monitoring_sg.id
+  description                  = "cAdvisor scrape from Prometheus"
+  from_port                    = 8081
+  to_port                      = 8081
+  ip_protocol                  = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "app_cadvisor_from_monitoring" {
+  security_group_id            = aws_security_group.app_sg.id
+  referenced_security_group_id = aws_security_group.monitoring_sg.id
+  description                  = "cAdvisor scrape from Prometheus"
+  from_port                    = 8081
+  to_port                      = 8081
   ip_protocol                  = "tcp"
 }

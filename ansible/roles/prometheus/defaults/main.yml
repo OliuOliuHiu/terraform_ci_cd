@@ -27,4 +27,6 @@ prometheus_external_url: "https://{{ monitoring_public_host }}{{ prometheus_rout
 # --- Scrape targets ---
 # Cổng node_exporter (khớp role node_exporter ở Bước 2).
 node_exporter_port: 9100
+# Cổng cAdvisor trên host (khớp role cadvisor — publish 8081 vì 8080 bận Jenkins).
+cadvisor_port: 8081
 prometheus_scrape_interval: 15s

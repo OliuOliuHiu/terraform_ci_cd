@@ -2,4 +2,4 @@
 # Biến dùng chung cho mọi role chạy trên host 'monitoring' (prometheus + grafana).
 # Web EIP = địa chỉ công khai người dùng gõ trên trình duyệt (qua nginx).
 # Điền MỘT chỗ duy nhất ở đây; cả Prometheus (external-url) lẫn Grafana (root_url) đều dùng.
-monitoring_public_host: "54.253.7.173"
+monitoring_public_host: "32.236.251.169"

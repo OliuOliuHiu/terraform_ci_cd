@@ -43,7 +43,7 @@ server {
         return 301 /gitlab/;
     }
     location /gitlab/ {
-        proxy_pass http://{{ app_host }}:{{ gitlab_upstream_port }};
+        proxy_pass http://{{ repo_server_host }}:{{ gitlab_upstream_port }};
         proxy_http_version 1.1;
 
         proxy_set_header Host              $host;
@@ -85,8 +85,40 @@ server {
         proxy_set_header Connection        $connection_upgrade;
     }
 
+    # registry
+    location /v2/ {
+        proxy_pass http://{{ app_host }}:{{ registry_upstream_port }};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        client_max_body_size 0;
+        proxy_read_timeout 900;
+        proxy_request_buffering off;
+    }
+
+    # Docker Registry UI (joxit) phục vụ dưới sub-path riêng /registry-ui/.
+    # proxy_pass CÓ '/' cuối -> cắt prefix /registry-ui/, joxit nhận request ở gốc "/".
+    # joxit bản mới dùng asset TƯƠNG ĐỐI nên khớp được khi ở sub-path.
+    # UI vẫn gọi API /v2/ cùng origin (khác path, cùng host:443) -> không CORS.
+    location = /registry-ui {
+        return 301 /registry-ui/;
+    }
+    location /registry-ui/ {
+        proxy_pass http://{{ app_host }}:{{ registry_ui_upstream_port }}/;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         default_type text/plain;
-        return 200 "lab-02 reverse proxy\navailable: /jenkins/  /gitlab/  /prometheus/  /grafana/\n";
+        return 200 "lab-02 reverse proxy\navailable: /jenkins/  /gitlab/  /prometheus/  /grafana/  /registry-ui/\n";
     }
 }

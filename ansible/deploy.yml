@@ -6,12 +6,14 @@
   roles:
     - docker
 
-- name: Install node_exporter on monitored servers (web + app)
-  hosts: web:app
+- name: Install exporters on monitored servers (web + app + repo_server)
+  hosts: web:app:repo_server
   become: true
-  tags: node_exporter
   roles:
-    - node_exporter
+    - role: node_exporter
+      tags: node_exporter
+    - role: cadvisor
+      tags: cadvisor
 
 - name: Configure nginx reverse proxy
   hosts: web
@@ -20,13 +22,23 @@
   roles:
     - nginx
 
-- name: Configure app services (Jenkins + GitLab)
+- name: Configure app services (Jenkins + Registry + Registry UI)
   hosts: app
   become: true
-  tags: jenkins
   roles:
-    - jenkins
-    # - gitlab
+    - role: jenkins
+      tags: jenkins
+    - role: registry
+      tags: registry
+    - role: registry_ui
+      tags: registry_ui
+
+- name: Configure repo server (GitLab)
+  hosts: repo_server
+  become: true
+  roles:
+    - role: gitlab
+      tags: gitlab
 
 - name: Configure monitoring stack (Prometheus + Grafana)
   hosts: monitoring

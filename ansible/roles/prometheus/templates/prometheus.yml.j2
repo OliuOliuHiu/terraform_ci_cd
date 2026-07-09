@@ -24,3 +24,17 @@ scrape_configs:
       - targets: ["{{ hostvars[groups['app'][0]].ansible_host }}:{{ node_exporter_port }}"]
         labels:
           instance: "app"
+
+  # cAdvisor (metrics từng container) trên web
+  - job_name: "cadvisor-web"
+    static_configs:
+      - targets: ["{{ hostvars[groups['web'][0]].ansible_host }}:{{ cadvisor_port }}"]
+        labels:
+          instance: "web"
+
+  # cAdvisor (metrics từng container) trên app
+  - job_name: "cadvisor-app"
+    static_configs:
+      - targets: ["{{ hostvars[groups['app'][0]].ansible_host }}:{{ cadvisor_port }}"]
+        labels:
+          instance: "app"

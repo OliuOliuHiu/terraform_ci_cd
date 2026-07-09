@@ -21,6 +21,11 @@ output "app_ssh_command" {
   value       = "ssh -i ${aws_key_pair.lab_key.key_name} -o ProxyJump=ubuntu@${aws_eip.bastion_eip.public_ip} ubuntu@${aws_instance.app.private_ip}"
 }
 
+output "repo_server_ssh_command" {
+  description = "SSH into the private repo server (GitLab) by jumping through the bastion"
+  value       = "ssh -i ${aws_key_pair.lab_key.key_name} -o ProxyJump=ubuntu@${aws_eip.bastion_eip.public_ip} ubuntu@${aws_instance.repo-server.private_ip}"
+}
+
 output "web_access_url" {
   description = "URL to access the nginx web server"
   value       = "http://${aws_eip.web_server_eip.public_ip}"
@@ -39,6 +44,11 @@ output "web_public_ip" {
   value       = aws_eip.web_server_eip.public_ip
 }
 
+output "web_private_ip" {
+  description = "Private IP of the web (nginx) server (reachable via the bastion)"
+  value       = aws_instance.web.private_ip
+}
+
 output "app_private_ip" {
   description = "Private IP of the internal app server (reachable via the bastion)"
   value       = aws_instance.app.private_ip
@@ -47,6 +57,11 @@ output "app_private_ip" {
 output "monitoring_private_ip" {
   description = "Private IP of the monitoring server (reachable via the bastion)"
   value       = aws_instance.monitoring.private_ip
+}
+
+output "repo_server_private_ip" {
+  description = "Private IP of the repo server / GitLab (reachable via the bastion)"
+  value       = aws_instance.repo-server.private_ip
 }
 
 output "instance_ids" {

@@ -1,0 +1,11 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for registry
+registry_version: "2.8.3"
+registry_image: "registry:{{ registry_version }}"
+registry_container_name: "registry"
+
+registry_http_port: 5000
+
+registry_data_volume: registry_data
+

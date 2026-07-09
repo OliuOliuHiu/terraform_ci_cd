@@ -11,7 +11,12 @@ nginx_conf_container_path: /etc/nginx/conf.d/default.conf
 # Backend app server (private IP lấy tự động từ inventory group 'app')
 app_host: "{{ hostvars[groups['app'][0]].ansible_host }}"
 jenkins_upstream_port: 8080
-gitlab_upstream_port: 8929
+registry_upstream_port: 5000
+registry_ui_upstream_port: 8082
+
+# Backend repo server (GitLab) — private IP lấy tự động từ inventory group 'repo_server'
+repo_server_host: "{{ hostvars[groups['repo_server'][0]].ansible_host }}"
+gitlab_upstream_port: 8092
 
 # Backend monitoring server (private IP lấy tự động từ inventory group 'monitoring')
 monitoring_host: "{{ hostvars[groups['monitoring'][0]].ansible_host }}"

@@ -48,6 +48,8 @@
       - "GITLAB_OMNIBUS_CONFIG={{ gitlab_omnibus_config }}"
       - -p
       - "{{ gitlab_http_port }}:80"
+      - -p
+      - "{{ gitlab_shell_ssh_port }}:22"
       - -v
       - "{{ gitlab_config_dir }}:/etc/gitlab"
       - -v

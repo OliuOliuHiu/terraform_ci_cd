@@ -8,7 +8,8 @@ gitlab_image: "gitlab/gitlab-ce:{{ gitlab_version }}"
 gitlab_container_name: gitlab
 
 # port publish trên app_runtime (web nginx proxy /gitlab/ sang đây)
-gitlab_http_port: 8929
+gitlab_http_port: 8092
+gitlab_shell_ssh_port: 2222
 
 # thư mục bind-mount để giữ config/log/data qua các lần deploy
 gitlab_config_dir: /srv/gitlab/config
@@ -31,3 +32,4 @@ gitlab_omnibus_config: >-
   external_url '{{ gitlab_external_url }}';
   nginx['listen_port'] = 80;
   nginx['listen_https'] = false;
+  gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_shell_ssh_port }};

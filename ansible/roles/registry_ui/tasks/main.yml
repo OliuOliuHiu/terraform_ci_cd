@@ -1,0 +1,39 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for registry_ui
+- name: Pull registry-ui image
+  ansible.builtin.command: docker pull "{{ registry_ui_image }}"
+  register: registry_ui_image_pull
+  changed_when: "'Downloaded newer image' in registry_ui_image_pull.stdout or 'Pull complete' in registry_ui_image_pull.stdout"
+
+- name: Remove old registry-ui container
+  ansible.builtin.command: docker rm -f "{{ registry_ui_container_name }}"
+  register: registry_ui_container_remove
+  failed_when: false
+  changed_when: registry_ui_container_remove.rc == 0
+
+- name: Run registry-ui container
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - -d
+      - --name
+      - "{{ registry_ui_container_name }}"
+      - --restart
+      - unless-stopped
+      - -p
+      - "{{ registry_ui_http_port }}:80"
+      - -e
+      - "REGISTRY_TITLE={{ registry_ui_title }}"
+      - -e
+      - "SINGLE_REGISTRY=true"
+      # Browser gọi /v2/ qua URL này (cùng origin với trang UI -> không CORS)
+      - -e
+      - "REGISTRY_URL={{ registry_ui_registry_url }}"
+      # Cho phép xoá image từ UI (registry cũng phải bật REGISTRY_STORAGE_DELETE_ENABLED)
+      - -e
+      - "DELETE_IMAGES=true"
+      - -e
+      - "SHOW_CONTENT_DIGEST=true"
+      - "{{ registry_ui_image }}"

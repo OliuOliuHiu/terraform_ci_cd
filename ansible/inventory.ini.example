@@ -1,0 +1,8 @@
+# Copy sang inventory.ini rồi điền IP thật (inventory.ini đã được gitignore).
+[app]
+app_server ansible_host=CHANGE_ME_app_public_ip
+
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=~/.ssh/your-key.pem
+ansible_python_interpreter=/usr/bin/python3

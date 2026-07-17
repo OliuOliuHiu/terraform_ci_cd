@@ -1,90 +1,24 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for roles/run
-- name: Ensure deploy directory exists
-  ansible.builtin.file:
-    path: "{{ deploy_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
+# Chỉ chạy container app và publish ra {{ app_port }}. Không có nginx/TLS ở đây:
+# deploy nằm private subnet, TLS + reverse proxy do nginx trên 'web' lo.
 
-- name: Validate TLS secrets
-  ansible.builtin.assert:
-    that:
-      - tls_cert_b64 | length > 0
-      - tls_key_b64 | length > 0
-    fail_msg: "TLS_CERT_B64 and TLS_KEY_B64 are required"
-
-- name: Ensure TLS directory exists
-  ansible.builtin.file:
-    path: "{{ tls_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0700"
-
-- name: Copy TLS certificate
-  ansible.builtin.copy:
-    content: "{{ tls_cert_b64 | b64decode }}"
-    dest: "{{ tls_dir }}/fullchain.pem"
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Copy TLS private key
-  ansible.builtin.copy:
-    content: "{{ tls_key_b64 | b64decode }}"
-    dest: "{{ tls_dir }}/privkey.pem"
-    owner: root
-    group: root
-    mode: "0600"
-  no_log: true
-
-- name: Render nginx config
-  ansible.builtin.template:
-    src: default.conf.j2
-    dest: "{{ nginx_conf_dest }}"
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Check Docker network
-  ansible.builtin.command: docker network inspect "{{ docker_network_name }}"
-  register: docker_network_check
-  changed_when: false
-  failed_when: false
-
-- name: Create Docker network
-  ansible.builtin.command: docker network create "{{ docker_network_name }}"
-  when: docker_network_check.rc != 0
-
-- name: Login to Docker Hub
-  ansible.builtin.command: docker login --username "{{ dockerhub_username }}" --password-stdin
+- name: Login to self-hosted registry
+  ansible.builtin.command: docker login "{{ registry_host }}" --username "{{ registry_username }}" --password-stdin
   args:
-    stdin: "{{ dockerhub_token }}"
-  register: dockerhub_login
-  changed_when: "'Login Succeeded' in dockerhub_login.stdout"
+    stdin: "{{ registry_token }}"
+  register: registry_login
+  changed_when: "'Login Succeeded' in registry_login.stdout"
   no_log: true
   when:
-    - dockerhub_username | length > 0
-    - dockerhub_token | length > 0
+    - registry_username | length > 0
+    - registry_token | length > 0
 
 - name: Pull application image
   ansible.builtin.command: docker pull "{{ app_image }}"
   register: app_image_pull
   changed_when: "'Downloaded newer image' in app_image_pull.stdout or 'Pull complete' in app_image_pull.stdout"
-
-- name: Pull nginx image
-  ansible.builtin.command: docker pull "{{ nginx_image }}"
-  register: nginx_image_pull
-  changed_when: "'Downloaded newer image' in nginx_image_pull.stdout or 'Pull complete' in nginx_image_pull.stdout"
-
-- name: Remove old nginx container
-  ansible.builtin.command: docker rm -f "{{ nginx_container_name }}"
-  register: nginx_container_remove
-  failed_when: false
-  changed_when: nginx_container_remove.rc == 0
 
 - name: Remove old application container
   ansible.builtin.command: docker rm -f "{{ app_container_name }}"
@@ -92,6 +26,8 @@
   failed_when: false
   changed_when: app_container_remove.rc == 0
 
+# -p {{ app_port }}:3000 -> nginx trên 'web' proxy /app tới đây được.
+# Thiếu -p là app chỉ sống trong docker network, web nginx nhận 502.
 - name: Create application container
   ansible.builtin.command:
     argv:
@@ -100,30 +36,10 @@
       - -d
       - --name
       - "{{ app_container_name }}"
-      - --network
-      - "{{ docker_network_name }}"
       - --restart
       - unless-stopped
+      - -p
+      - "{{ app_port }}:3000"
+      - -e
+      - "NODE_ENV=production"
       - "{{ app_image }}"
-
-- name: Create nginx container
-  ansible.builtin.command:
-    argv:
-      - docker
-      - run
-      - -d
-      - --name
-      - "{{ nginx_container_name }}"
-      - --network
-      - "{{ docker_network_name }}"
-      - --restart
-      - unless-stopped
-      - -p
-      - 80:80
-      - -p
-      - 443:443
-      - -v
-      - "{{ nginx_conf_dest }}:{{ nginx_conf_container_path }}:ro"
-      - -v
-      - "{{ tls_dir }}:/etc/tls:ro"
-      - "{{ nginx_image }}"

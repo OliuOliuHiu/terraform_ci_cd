@@ -1,22 +1,25 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for roles/run
-dockerhub_username: "{{ lookup('env', 'DOCKERHUB_USERNAME') | default('', true) }}"
-dockerhub_token: "{{ lookup('env', 'DOCKERHUB_TOKEN') | default('', true) }}"
+# Registry tự-host (Phương án 3). Deploy server pull image TRỰC TIẾP từ đây qua TLS.
+# Host này phải đã được registry_client role chuẩn bị (/etc/hosts + CA trust).
+registry_host: "{{ lookup('env', 'REGISTRY_HOST') | default('registry.internal:5000', true) }}"
+registry_username: "{{ lookup('env', 'REGISTRY_USERNAME') | default('', true) }}"
+registry_token: "{{ lookup('env', 'REGISTRY_TOKEN') | default('', true) }}"
 
-app_image_name: "{{ (dockerhub_username ~ '/') if dockerhub_username | length > 0 else '' }}lab-02-tera"
+app_image_name: "{{ registry_host }}/nestjs-dev"
 app_image_tag: latest
 app_image: "{{ lookup('env', 'APP_IMAGE') | default(app_image_name ~ ':' ~ app_image_tag, true) }}"
-nginx_image: nginx:1.27-alpine
 
-app_container_name: tera-app
-nginx_container_name: tera-nginx
-docker_network_name: tera-net
+app_container_name: nestjs-app
 
-deploy_dir: /home/ubuntu/lab-02-tera
-nginx_conf_dest: "{{ deploy_dir }}/nginx.conf"
-nginx_conf_container_path: /etc/nginx/conf.d/default.conf
-tls_cert_b64: "{{ lookup('env', 'TLS_CERT_B64') | default('', true) }}"
-tls_key_b64: "{{ lookup('env', 'TLS_KEY_B64') | default('', true) }}"
-tls_dir: /etc/tls
+# App publish thẳng ra port này trên deploy server — KHÔNG có nginx/TLS ở đây.
+# Deploy nằm private subnet: deploy_sg chỉ mở 3000 cho web_server_sg (xem
+# deploy_ingress_ports trong infra/terraform/locals.tf), không có đường từ
+# internet vào. nginx trên 'web' mới là chỗ terminate TLS rồi proxy
+# /app -> deploy:3000 (infra/ansible/roles/nginx/templates/default.conf.j2).
+#
+# Đổi giá trị này thì phải đổi đồng bộ 2 chỗ:
+#   - deploy_ingress_ports  (infra/terraform/locals.tf)
+#   - deploy_upstream_port  (infra/ansible/roles/nginx/defaults/main.yml)
 app_port: 3000

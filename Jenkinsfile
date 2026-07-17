@@ -1,19 +1,7 @@
-// CI/CD cho NestJS app: build & push image -> deploy lên deploy server bằng Ansible (role run).
-//
-// Chạy trên BUILD SERVER (Jenkins SSH-launch agent, label 'build') — nơi có sẵn:
-// docker, ansible, ssh, git. Image được đẩy lên REGISTRY TỰ-HOST (registry.internal:5000,
-// TLS + basic auth native). Deploy server pull thẳng từ registry đó.
-//
-// Build server đã được ansible (role registry_client) chuẩn bị: /etc/hosts trỏ
-// registry.internal -> app private IP, và CA nạp ở /etc/docker/certs.d/.
-//
-// Deploy server chỉ chạy container app, publish ra :3000. Không có nginx/TLS ở
-// đó — nó nằm private subnet, nginx trên 'web' terminate TLS và proxy /app tới.
-//
-// CREDENTIALS cần tạo trong Jenkins (Manage Jenkins > Credentials):
-//   registry-creds - Username with password  -> user/pass basic-auth của registry
-//   deploy-host    - Secret text             -> private IP của deploy server
-//   build-agent-ssh    - SSH Username with private key -> key SSH vào deploy server
+// CREDENTIALS to create in Jenkins (Manage Jenkins > Credentials):
+//   registry-creds  - Username with password        -> registry basic-auth user/pass
+//   deploy-host     - Secret text                    -> private IP of the deploy server
+//   build-agent-ssh - SSH Username with private key  -> SSH key into the deploy server
 
 pipeline {
   agent { label 'agent-builder' }
@@ -38,7 +26,7 @@ pipeline {
           env.IMAGE_REPO = "${REGISTRY_HOST}/${IMAGE_NAME}"
           env.IMAGE_TAG  = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
         }
-        echo "Sẽ build & deploy image: ${env.IMAGE_REPO}:${env.IMAGE_TAG}"
+        echo "Will build & deploy image: ${env.IMAGE_REPO}:${env.IMAGE_TAG}"
       }
     }
 
@@ -70,11 +58,11 @@ cat > ansible/inventory.ci.ini <<EOF
 deploy_server ansible_host=$DEPLOY_HOST ansible_user=ubuntu ansible_ssh_private_key_file=$SSH_KEY ansible_python_interpreter=/usr/bin/python3
 EOF
 
-# role run đọc các biến này qua lookup('env', ...)
+# the run role reads these variables via lookup('env', ...)
 export REGISTRY_HOST="$REGISTRY_HOST"
 export REGISTRY_USERNAME="$REGISTRY_USR"
 export REGISTRY_TOKEN="$REGISTRY_PSW"
-# Deploy đúng image vừa build (theo commit SHA), không phụ thuộc :latest
+# Deploy the exact image just built (by commit SHA), not relying on :latest
 export APP_IMAGE="$IMAGE_REPO:$IMAGE_TAG"
 
 ansible-playbook -i ansible/inventory.ci.ini ansible/deploy.yml
@@ -89,10 +77,10 @@ ansible-playbook -i ansible/inventory.ci.ini ansible/deploy.yml
       sh 'docker logout "$REGISTRY_HOST" || true'
     }
     success {
-      echo "Deploy thành công: ${env.IMAGE_REPO}:${env.IMAGE_TAG}"
+      echo "Deploy succeeded: ${env.IMAGE_REPO}:${env.IMAGE_TAG}"
     }
     failure {
-      echo 'Pipeline thất bại — kiểm tra log ở stage bị đỏ.'
+      echo 'Pipeline failed — check the log of the red stage.'
     }
   }
 }

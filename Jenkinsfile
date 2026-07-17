@@ -13,10 +13,10 @@
 // CREDENTIALS cần tạo trong Jenkins (Manage Jenkins > Credentials):
 //   registry-creds - Username with password  -> user/pass basic-auth của registry
 //   deploy-host    - Secret text             -> private IP của deploy server
-//   ec2-ssh-key    - SSH Username with private key -> key SSH vào deploy server
+//   build-agent-ssh    - SSH Username with private key -> key SSH vào deploy server
 
 pipeline {
-  agent { label 'build' }
+  agent { label 'agent-builder' }
 
   options {
     timestamps()
@@ -59,7 +59,7 @@ docker push "$IMAGE_REPO:latest"
         DEPLOY_HOST = credentials('deploy-host')
       }
       steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+        withCredentials([sshUserPrivateKey(credentialsId: 'build-agent-ssh', keyFileVariable: 'SSH_KEY')]) {
           sh '''
 set -e
 mkdir -p ~/.ssh

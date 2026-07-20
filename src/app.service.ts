@@ -4,9 +4,9 @@ import { Injectable } from '@nestjs/common';
 // SỬA THÔNG TIN CỦA BẠN Ở ĐÂY — phần HTML/CSS bên dưới không cần đụng tới.
 // ---------------------------------------------------------------------------
 const profile = {
-  name: 'Lazy Guy',
+  name: 'Lazy Guy(OliuHiu)',
   title: 'DevOps Engineer',
-  initials: 'VH',
+  initials: 'DH',
   bio: 'Mình xây dựng và vận hành hạ tầng tự động: Terraform dựng VPC trên AWS, Ansible cấu hình server, Jenkins build & deploy container.',
   skills: [
     'Terraform',

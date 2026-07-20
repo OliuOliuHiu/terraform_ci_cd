@@ -15,8 +15,18 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('trả về trang HTML kèm tên trong profile', () => {
+      const html = appController.getProfilePage();
+
+      expect(html).toContain('<!doctype html>');
+      expect(html).toContain(appController.getProfile().name);
+    });
+
+    it('endpoint JSON trả về profile', () => {
+      const profile = appController.getProfile();
+
+      expect(profile.name).toBeTruthy();
+      expect(profile.skills.length).toBeGreaterThan(0);
     });
   });
 });
